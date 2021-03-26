@@ -105,7 +105,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2021-03-01'
           resources: {
             requests: {
               cpu: 2
-              memoryInGB: 4
+              memoryInGB: 8
             }
           }
           ports: ports
