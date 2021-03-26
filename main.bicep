@@ -2,10 +2,15 @@
 @maxLength(11)
 param namePrefix string
 
+param serverName string = namePrefix
+
+param worldName string = 'Azure'
+
 param location string = resourceGroup().location
 
 var identityName = 'storage-msi'
-var fileShareName = 'valheim-test'
+var fileShareName = 'valheim'
+var volumeName = 'configvolume'
 
 var uniqueStorageName = '${toLower(namePrefix)}${uniqueString(resourceGroup().id)}'
 var roleDefinitionId = resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
@@ -15,7 +20,11 @@ var image = 'lloesche/valheim-server:main'
 var environmentVariables = [
   {
     name: 'SERVER_NAME'
-    value: 'Tyler Test'
+    value: serverName
+  }
+  {
+    name: 'WORLD_NAME'
+    value: worldName
   }
 ]
 
@@ -100,6 +109,13 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2021-03-01'
             }
           }
           ports: ports
+          volumeMounts: [
+            {
+              name: volumeName
+              mountPath: '/config'
+              readOnly: false
+            }
+          ]
         }
       }
     ]
@@ -108,7 +124,19 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2021-03-01'
       type: 'Public'
       ports: ports
     }
+    volumes: [
+      {
+        name: volumeName
+        azureFile: {
+          readOnly: false
+          shareName: fileShareName
+          storageAccountName: stg.name
+          storageAccountKey: listKeys(stg.name, stg.apiVersion).keys[0].value
+        }
+      }
+    ]
   }
 }
 
 output fileEndpoint string = stg.properties.primaryEndpoints.file
+output containerIpv4Address string = containerGroup.properties.ipAddress.ip
